@@ -68,15 +68,15 @@
 
         .nav-tabs {
             display: flex;
-            gap: 10px;
+            gap: 8px;
             margin-bottom: 20px;
             justify-content: center;
             flex-wrap: wrap;
         }
 
         .tab-btn {
-            padding: 10px 18px;
-            font-size: 0.95rem;
+            padding: 10px 16px;
+            font-size: 0.9rem;
             font-weight: 600;
             border: 2px solid var(--primary);
             background: white;
@@ -141,6 +141,16 @@
             border-radius: 20px;
         }
 
+        .type-badge {
+            background: #f3e8ff;
+            color: #6b21a8;
+            padding: 4px 10px;
+            border-radius: 6px;
+            font-size: 0.85rem;
+            margin-bottom: 8px;
+            display: inline-block;
+        }
+
         .question-text {
             font-size: 1.2rem;
             font-weight: bold;
@@ -176,6 +186,12 @@
             background: #f5f3ff;
         }
 
+        .option-btn.selected {
+            border-color: var(--primary);
+            background-color: #e0e7ff;
+            font-weight: bold;
+        }
+
         .option-btn.correct {
             background-color: #d1fae5 !important;
             border-color: var(--correct) !important;
@@ -189,6 +205,19 @@
             color: #991b1b;
         }
 
+        .text-input-container {
+            margin-bottom: 20px;
+        }
+
+        .text-input {
+            width: 100%;
+            padding: 12px;
+            font-size: 1.1rem;
+            border: 2px solid var(--border);
+            border-radius: 8px;
+            box-sizing: border-box;
+        }
+
         .feedback {
             margin-top: 16px;
             padding: 12px;
@@ -197,8 +226,14 @@
             display: none;
         }
 
-        .next-btn {
+        .action-btn-row {
+            display: flex;
+            justify-content: flex-end;
             margin-top: 20px;
+            gap: 10px;
+        }
+
+        .submit-btn, .next-btn {
             padding: 12px 24px;
             background: var(--primary);
             color: white;
@@ -206,11 +241,10 @@
             border-radius: 8px;
             font-size: 1rem;
             cursor: pointer;
-            float: right;
-            display: none;
+            font-weight: bold;
         }
 
-        .next-btn:hover {
+        .submit-btn:hover, .next-btn:hover {
             background: var(--primary-hover);
         }
 
@@ -361,21 +395,28 @@
 
     <div class="nav-tabs">
         <button class="tab-btn active" onclick="switchTab('quiz')">🎯 4択クイズ (25問)</button>
+        <button class="tab-btn" onclick="switchTab('multi')">☑️ 複数選択問題 (12問)</button>
+        <button class="tab-btn" onclick="switchTab('input')">⌨️ 記述入力問題 (15問)</button>
+        <button class="tab-btn" onclick="switchTab('testmode')" style="border-color:#dc2626; color:#dc2626;">🔥 テストモード (全52問ランダム)</button>
         <button class="tab-btn" onclick="switchTab('fill')">✍️ 表穴埋めテスト</button>
         <button class="tab-btn" onclick="switchTab('flashcard')">🃏 単語帳 (カード)</button>
         <button class="tab-btn" onclick="switchTab('reference')">📖 一覧表を見る</button>
     </div>
 
-    <!-- QUIZ SECTION -->
+    <!-- QUIZ SECTION (Dynamic container for 4択, Multi, Input, and TestMode) -->
     <div id="quiz-section" class="card">
         <div class="quiz-header">
             <span id="quiz-progress">問題 1 / --</span>
             <span class="score-badge" id="quiz-score">スコア: 0</span>
         </div>
+        <div id="type-badge-container"></div>
         <div class="question-text" id="question-text">読み込み中...</div>
-        <div class="options-grid" id="options-container"></div>
+        <div id="quiz-input-area"></div>
         <div class="feedback" id="feedback"></div>
-        <button class="next-btn" id="next-btn" onclick="nextQuestion()">次の問題へ ➔</button>
+        <div class="action-btn-row">
+            <button class="submit-btn" id="submit-btn" onclick="submitCurrentAnswer()">回答を決定する ✅</button>
+            <button class="next-btn hidden" id="next-btn" onclick="nextQuestion()">次の問題へ ➔</button>
+        </div>
     </div>
 
     <!-- FILL IN THE TABLE SECTION -->
@@ -664,17 +705,15 @@ function playSound(type) {
     const now = audioCtx.currentTime;
 
     if (type === 'correct') {
-        // High pitch ding-dong chime
         osc.type = 'sine';
-        osc.frequency.setValueAtTime(523.25, now); // C5
-        osc.frequency.setValueAtTime(659.25, now + 0.12); // E5
-        osc.frequency.setValueAtTime(783.99, now + 0.24); // G5
+        osc.frequency.setValueAtTime(523.25, now);
+        osc.frequency.setValueAtTime(659.25, now + 0.12);
+        osc.frequency.setValueAtTime(783.99, now + 0.24);
         gain.gain.setValueAtTime(0.2, now);
         gain.gain.exponentialRampToValueAtTime(0.001, now + 0.5);
         osc.start(now);
         osc.stop(now + 0.5);
     } else if (type === 'incorrect') {
-        // Low pitch buzz
         osc.type = 'sawtooth';
         osc.frequency.setValueAtTime(150, now);
         osc.frequency.setValueAtTime(120, now + 0.15);
@@ -683,7 +722,6 @@ function playSound(type) {
         osc.start(now);
         osc.stop(now + 0.4);
     } else if (type === 'flip') {
-        // Soft click
         osc.type = 'triangle';
         osc.frequency.setValueAtTime(400, now);
         gain.gain.setValueAtTime(0.1, now);
@@ -691,7 +729,6 @@ function playSound(type) {
         osc.start(now);
         osc.stop(now + 0.08);
     } else if (type === 'fanfare') {
-        // Short celebratory fanfare
         const notes = [523.25, 659.25, 783.99, 1046.50];
         notes.forEach((freq, idx) => {
             const noteOsc = audioCtx.createOscillator();
@@ -708,263 +745,76 @@ function playSound(type) {
     }
 }
 
-// Quiz Data (25 questions total)
-const quizData = [
-    // 食中毒 - 細菌・ウイルス・寄生虫
-    {
-        q: "1. 細菌性食中毒のうち、「感染型」に分類される細菌の組み合わせとして正しいものはどれ？",
-        options: [
-            "サルモネラ属菌・腸炎ビブリオ・カンピロバクター・病原性大腸菌",
-            "黄色ブドウ球菌・ボツリヌス菌",
-            "ノロウイルス・アニサキス",
-            "アフラトキシン・ソラニン"
-        ],
-        a: 0
-    },
-    {
-        q: "2. 細菌性食中毒のうち、「毒素型」に分類されるものはどれ？",
-        options: [
-            "黄色ブドウ球菌・ボツリヌス菌",
-            "サルモネラ属菌・カンピロバクター",
-            "腸炎ビブリオ・病原性大腸菌",
-            "ノロウイルス"
-        ],
-        a: 0
-    },
-    {
-        q: "3. 寄生虫による食中毒の代表例と、その予防法として正しいものはどれ？",
-        options: [
-            "アニサキス — 70℃以上で加熱するか、-20℃で24時間以上冷凍する",
-            "ノロウイルス — 真水でよく洗う",
-            "ソラニン — 煮こぼしてアク抜きをする",
-            "テトロドトキシン — 水に長時間晒す"
-        ],
-        a: 0
-    },
-    {
-        q: "4. ノロウイルスの加熱・冷凍による予防基準として正しいものはどれ？",
-        options: [
-            "70℃以上でしっかり加熱するか、-20℃で24時間以上冷凍する",
-            "50℃以上で加熱するか、-10℃で12時間以上冷凍する",
-            "100℃で1分以上加熱する（冷凍効果なし）",
-            "常温で1時間放置する"
-        ],
-        a: 0
-    },
-    {
-        q: "5. 調理時の衛生管理において、「魚」を洗う時に推奨されるのはどれ？",
-        options: [
-            "真水で洗う",
-            "塩水だけで洗う",
-            "洗わずにそのまま調理する",
-            "消毒用アルコールをかける"
-        ],
-        a: 0
-    },
-    // 食中毒 - 自然毒
-    {
-        q: "6. じゃがいもの芽に含まれる自然毒（植物性）の名称はどれ？",
-        options: [
-            "ソラニン",
-            "アフラトキシン",
-            "テトロドトキシン",
-            "ヒスタミン"
-        ],
-        a: 0
-    },
-    {
-        q: "7. ナッツのかびから発生する自然毒（植物性）の名称はどれ？",
-        options: [
-            "アフラトキシン",
-            "ソラニン",
-            "ヒスタミン",
-            "テトロドトキシン"
-        ],
-        a: 0
-    },
-    {
-        q: "8. ふぐ毒の成分（自然毒・動物性）の名称はどれ？",
-        options: [
-            "テトロドトキシン",
-            "ソラニン",
-            "アフラトキシン",
-            "ヒスタミン"
-        ],
-        a: 0
-    },
-    {
-        q: "9. 植物性自然毒の予防法として適切でないものはどれ？",
-        options: [
-            "じゃがいもの芽は加熱すれば毒が消えるので残して調理する",
-            "あく抜きを正確に行う",
-            "傷のある物、虫食い、かびを避ける",
-            "素人判断をしない"
-        ],
-        a: 0
-    },
-    {
-        q: "10. 動物性自然毒（ふぐ毒・貝毒など）の予防法として正しいものはどれ？",
-        options: [
-            "自分で調理せず免許を持つ専門家に任せる",
-            "沸騰したお湯で30分以上煮込む",
-            "塩漬けにして乾燥させる",
-            "酢に半日つけておく"
-        ],
-        a: 0
-    },
-    // 食中毒 - 化学物質・アレルギー
-    {
-        q: "11. 赤身の魚で発生しやすく、低温保存で菌の増殖を防ぐ必要があるアレルギー様食中毒の原因物質はどれ？",
-        options: [
-            "ヒスタミン",
-            "テトロドトキシン",
-            "ソラニン",
-            "PCB"
-        ],
-        a: 0
-    },
-    {
-        q: "12. 有機化学物質（農薬・PCB・ホルムアルデヒドなど）による食中毒予防として正しいものはどれ？",
-        options: [
-            "食品以外のものを食品容器に移し替えない",
-            "電子レンジ用でない樹脂容器でレンジ加熱する",
-            "薬品を食品のすぐ隣に保管する",
-            "洗剤の空き容器に醤油を入れる"
-        ],
-        a: 0
-    },
-    {
-        q: "13. 無機化学物質による食中毒（無機毒）の原因となる金属に含まれないものはどれ？",
-        options: [
-            "ソラニン",
-            "水銀",
-            "鉛",
-            "カドミウム"
-        ],
-        a: 0
-    },
-    {
-        q: "14. 無機毒による食中毒予防として「割れ目が入った物は使用を避ける」とある容器はどれ？",
-        options: [
-            "ホーロー",
-            "プラスチック容器",
-            "ガラスコップ",
-            "土鍋"
-        ],
-        a: 0
-    },
-    // 食品添加物
-    {
-        q: "15. 食品添加物のうち、「サッカリン・アスパルテーム・キシリトール」の用途名はどれ？",
-        options: [
-            "甘味料",
-            "着色料",
-            "保存料",
-            "酸化防止剤"
-        ],
-        a: 0
-    },
-    {
-        q: "16. 食品添加物のうち、「タール系色素・クチナシ色素」の用途名はどれ？",
-        options: [
-            "着色料",
-            "漂白剤",
-            "保存料",
-            "防かび剤"
-        ],
-        a: 0
-    },
-    {
-        q: "17. 「ソルビン酸・安息香酸Na」の主な用途名と、使用される食品例（しょうゆ・みそ・バター・ハム等）の組み合わせはどれ？",
-        options: [
-            "保存料 — 食品の保存性を高める",
-            "酸化防止剤 — 酸化による品質低下を防ぐ",
-            "防かび剤 — かびの発生を防止する",
-            "漂白剤 — 食品を漂白する"
-        ],
-        a: 0
-    },
-    {
-        q: "18. 「L-アスコルビン酸・エリソルビン酸」の用途名と目的はどれ？",
-        options: [
-            "酸化防止剤 — 酸化による品質の低下を防ぐ",
-            "保存料 — 食品の保存性を高める",
-            "漂白剤 — 食品を漂白する",
-            "甘味料 — 食品を甘くする"
-        ],
-        a: 0
-    },
-    {
-        q: "19. レモン・バナナ・オレンジなどの柑橘・果物に使用される防かび剤の代表例として正しいものはどれ？",
-        options: [
-            "イマザリル・ジフェニル・OPP・TBZ",
-            "亜硫酸ナトリウム・次亜塩素酸ナトリウム",
-            "ソルビン酸・安息香酸Na",
-            "サッカリン・キシリトール"
-        ],
-        a: 0
-    },
-    {
-        q: "20. かんぴょうやこんにゃく粉に使用され、「食品を漂白する」目的で使われる代表的な添加物はどれ？",
-        options: [
-            "亜硫酸ナトリウム・次亜塩素酸ナトリウム",
-            "イマザリル・OPP",
-            "タール系色素・クチナシ色素",
-            "L-アスコルビン酸"
-        ],
-        a: 0
-    },
-    {
-        q: "21. 「清涼飲料水・菓子・ジャム・漬け物」に使われる甘味料に含まれないものはどれ？",
-        options: [
-            "ソルビン酸",
-            "サッカリン",
-            "アスパルテーム",
-            "キシリトール"
-        ],
-        a: 0
-    },
-    {
-        q: "22. 食品添加物「防かび剤」の目的として正しいものはどれ？",
-        options: [
-            "かびの発生を防止",
-            "食品を甘くする",
-            "食品の保存性を高める",
-            "食品を漂白する"
-        ],
-        a: 0
-    },
-    {
-        q: "23. 魚肉ソーセージに使用されることがある添加物の組み合わせとして正しいものはどれ？",
-        options: [
-            "着色料（タール系色素・クチナシ色素）",
-            "防かび剤（イマザリル・OPP）",
-            "漂白剤（亜硫酸ナトリウム）",
-            "甘味料（サッカリン）"
-        ],
-        a: 0
-    },
-    {
-        q: "24. 「バター・油脂・魚肉製品」に使われ、酸化による品質の低下を防ぐ代表的な添加物はどれ？",
-        options: [
-            "L-アスコルビン酸・エリソルビン酸",
-            "サッカリン・キシリトール",
-            "安息香酸Na・ソルビン酸",
-            "ジフェニル・TBZ"
-        ],
-        a: 0
-    },
-    {
-        q: "25. 微生物性食中毒を防ぐための基本項目として不適切なものはどれ？",
-        options: [
-            "調理器具は洗わずに連続使用する",
-            "低温で保存し、菌の増殖を防ぐ",
-            "中心まで火が通るように十分加熱する",
-            "傷のある手で直接食品にさわらない"
-        ],
-        a: 0
-    }
+// ----------------------------------------------------
+// ALL QUESTIONS DATABASE (Total 52 Questions)
+// ----------------------------------------------------
+
+// 1. Single-choice (25 questions)
+const singleQuestions = [
+    { type: "single", q: "1. 細菌性食中毒のうち、「感染型」に分類される細菌の組み合わせとして正しいものはどれ？", options: ["サルモネラ属菌・腸炎ビブリオ・カンピロバクター・病原性大腸菌", "黄色ブドウ球菌・ボツリヌス菌", "ノロウイルス・アニサキス", "アフラトキシン・ソラニン"], a: 0 },
+    { type: "single", q: "2. 細菌性食中毒のうち、「毒素型」に分類されるものはどれ？", options: ["黄色ブドウ球菌・ボツリヌス菌", "サルモネラ属菌・カンピロバクター", "腸炎ビブリオ・病原性大腸菌", "ノロウイルス"], a: 0 },
+    { type: "single", q: "3. 寄生虫による食中毒の代表例と、その予防法として正しいものはどれ？", options: ["アニサキス — 70℃以上で加熱するか、-20℃で24時間以上冷凍する", "ノロウイルス — 真水でよく洗う", "ソラニン — 煮こぼしてアク抜きをする", "テトロドトキシン — 水に長時間晒す"], a: 0 },
+    { type: "single", q: "4. ノロウイルスの加熱・冷凍による予防基準として正しいものはどれ？", options: ["70℃以上でしっかり加熱するか、-20℃で24時間以上冷凍する", "50℃以上で加熱するか、-10℃で12時間以上冷凍する", "100℃で1分以上加熱する（冷凍効果なし）", "常温で1時間放置する"], a: 0 },
+    { type: "single", q: "5. 調理時の衛生管理において、「魚」を洗う時に推奨されるのはどれ？", options: ["真水で洗う", "塩水だけで洗う", "洗わずにそのまま調理する", "消毒用アルコールをかける"], a: 0 },
+    { type: "single", q: "6. じゃがいもの芽に含まれる自然毒（植物性）の名称はどれ？", options: ["ソラニン", "アフラトキシン", "テトロドトキシン", "ヒスタミン"], a: 0 },
+    { type: "single", q: "7. ナッツのかびから発生する自然毒（植物性）の名称はどれ？", options: ["アフラトキシン", "ソラニン", "ヒスタミン", "テトロドトキシン"], a: 0 },
+    { type: "single", q: "8. ふぐ毒の成分（自然毒・動物性）の名称はどれ？", options: ["テトロドトキシン", "ソラニン", "アフラトキシン", "ヒスタミン"], a: 0 },
+    { type: "single", q: "9. 植物性自然毒の予防法として適切でないものはどれ？", options: ["じゃがいもの芽は加熱すれば毒が消えるので残して調理する", "あく抜きを正確に行う", "傷のある物、虫食い、かびを避ける", "素人判断をしない"], a: 0 },
+    { type: "single", q: "10. 動物性自然毒（ふぐ毒・貝毒など）の予防法として正しいものはどれ？", options: ["自分で調理せず免許を持つ専門家に任せる", "沸騰したお湯で30分以上煮込む", "塩漬けにして乾燥させる", "酢に半日つけておく"], a: 0 },
+    { type: "single", q: "11. 赤身の魚で発生しやすく、低温保存で菌の増殖を防ぐ必要があるアレルギー様食中毒の原因物質はどれ？", options: ["ヒスタミン", "テトロドトキシン", "ソラニン", "PCB"], a: 0 },
+    { type: "single", q: "12. 有機化学物質（農薬・PCB・ホルムアルデヒドなど）による食中毒予防として正しいものはどれ？", options: ["食品以外のものを食品容器に移し替えない", "電子レンジ用でない樹脂容器でレンジ加熱する", "薬品を食品のすぐ隣に保管する", "洗剤の空き容器に醤油を入れる"], a: 0 },
+    { type: "single", q: "13. 無機化学物質による食中毒（無機毒）の原因となる金属に含まれないものはどれ？", options: ["ソラニン", "水銀", "鉛", "カドミウム"], a: 0 },
+    { type: "single", q: "14. 無機毒による食中毒予防として「割れ目が入った物は使用を避ける」とある容器はどれ？", options: ["ホーロー", "プラスチック容器", "ガラスコップ", "土鍋"], a: 0 },
+    { type: "single", q: "15. 食品添加物のうち、「サッカリン・アスパルテーム・キシリトール」の用途名はどれ？", options: ["甘味料", "着色料", "保存料", "酸化防止剤"], a: 0 },
+    { type: "single", q: "16. 食品添加物のうち、「タール系色素・クチナシ色素」の用途名はどれ？", options: ["着色料", "漂白剤", "保存料", "防かび剤"], a: 0 },
+    { type: "single", q: "17. 「ソルビン酸・安息香酸Na」の主な用途名と、使用される食品例（しょうゆ・みそ・バター・ハム等）の組み合わせはどれ？", options: ["保存料 — 食品の保存性を高める", "酸化防止剤 — 酸化による品質低下を防ぐ", "防かび剤 — かびの発生を防止する", "漂白剤 — 食品を漂白する"], a: 0 },
+    { type: "single", q: "18. 「L-アスコルビン酸・エリソルビン酸」の用途名と目的はどれ？", options: ["酸化防止剤 — 酸化による品質の低下を防ぐ", "保存料 — 食品の保存性を高める", "漂白剤 — 食品を漂白する", "甘味料 — 食品を甘くする"], a: 0 },
+    { type: "single", q: "19. レモン・バナナ・オレンジなどの柑橘・果物に使用される防かび剤の代表例として正しいものはどれ？", options: ["イマザリル・ジフェニル・OPP・TBZ", "亜硫酸ナトリウム・次亜塩素酸ナトリウム", "ソルビン酸・安息香酸Na", "サッカリン・キシリトール"], a: 0 },
+    { type: "single", q: "20. かんぴょうやこんにゃく粉に使用され、「食品を漂白する」目的で使われる代表的な添加物はどれ？", options: ["亜硫酸ナトリウム・次亜塩素酸ナトリウム", "イマザリル・OPP", "タール系色素・クチナシ色素", "L-アスコルビン酸"], a: 0 },
+    { type: "single", q: "21. 「清涼飲料水・菓子・ジャム・漬け物」に使われる甘味料に含まれないものはどれ？", options: ["ソルビン酸", "サッカリン", "アスパルテーム", "キシリトール"], a: 0 },
+    { type: "single", q: "22. 食品添加物「防かび剤」の目的として正しいものはどれ？", options: ["かびの発生を防止", "食品を甘くする", "食品の保存性を高める", "食品を漂白する"], a: 0 },
+    { type: "single", q: "23. 魚肉ソーセージに使用されることがある添加物の組み合わせとして正しいものはどれ？", options: ["着色料（タール系色素・クチナシ色素）", "防かび剤（イマザリル・OPP）", "漂白剤（亜硫酸ナトリウム）", "甘味料（サッカリン）"], a: 0 },
+    { type: "single", q: "24. 「バター・油脂・魚肉製品」に使われ、酸化による品質の低下を防ぐ代表的な添加物はどれ？", options: ["L-アスコルビン酸・エリソルビン酸", "サッカリン・キシリトール", "安息香酸Na・ソルビン酸", "ジフェニル・TBZ"], a: 0 },
+    { type: "single", q: "25. 微生物性食中毒を防ぐための基本項目として不適切なものはどれ？", options: ["調理器具は洗わずに連続使用する", "低温で保存し、菌の増殖を防ぐ", "中心まで火が通るように十分加熱する", "傷のある手で直接食品にさわらない"], a: 0 }
 ];
+
+// 2. Multi-choice (12 questions)
+const multiQuestions = [
+    { type: "multi", q: "【複数選択】「感染型」の細菌性食中毒の原因となる菌をすべて選べ（2つ以上選択）。", options: ["サルモネラ属菌", "カンピロバクター", "黄色ブドウ球菌", "ボツリヌス菌"], a: [0, 1] },
+    { type: "multi", q: "【複数選択】「毒素型」の細菌性食中毒の原因となる菌をすべて選べ。", options: ["黄色ブドウ球菌", "ボツリヌス菌", "腸炎ビブリオ", "病原性大腸菌"], a: [0, 1] },
+    { type: "multi", q: "【複数選択】植物性の自然毒およびその原因物質をすべて選べ。", options: ["ソラニン（じゃがいもの芽）", "アフラトキシン（ナッツのかび）", "テトロドトキシン", "ヒスタミン"], a: [0, 1] },
+    { type: "multi", q: "【複数選択】食品添加物「甘味料」の代表例をすべて選べ。", options: ["サッカリン", "アスパルテーム", "キシリトール", "ソルビン酸"], a: [0, 1, 2] },
+    { type: "multi", q: "【複数選択】食品添加物「防かび剤」の代表例をすべて選べ。", options: ["イマザリル", "ジフェニル", "OPP", "L-アスコルビン酸"], a: [0, 1, 2] },
+    { type: "multi", q: "【複数選択】無機化学物質（無機毒）による食中毒の原因となる金属をすべて選べ。", options: ["水銀", "鉛", "カドミウム", "ヒスタミン"], a: [0, 1, 2] },
+    { type: "multi", q: "【複数選択】食品添加物「漂白剤」の代表例をすべて選べ。", options: ["亜硫酸ナトリウム", "次亜塩素酸ナトリウム", "クチナシ色素", "安息香酸Na"], a: [0, 1] },
+    { type: "multi", q: "【複数選択】食品添加物「保存料」の代表例をすべて選べ。", options: ["ソルビン酸", "安息香酸Na", "エリソルビン酸", "サッカリン"], a: [0, 1] },
+    { type: "multi", q: "【複数選択】食品添加物「酸化防止剤」の代表例をすべて選べ。", options: ["L-アスコルビン酸", "エリソルビン酸", "タール系色素", "TBZ"], a: [0, 1] },
+    { type: "multi", q: "【複数選択】食品添加物「着色料」の代表例をすべて選べ。", options: ["タール系色素", "クチナシ色素", "アスパルテーム", "ジフェニル"], a: [0, 1] },
+    { type: "multi", q: "【複数選択】ノロウイルスやアニサキスの予防法として共通する処理条件を選べ。", options: ["70℃以上でしっかり加熱する", "-20℃で24時間以上冷凍する", "塩水に1時間つける", "真水でよく洗うだけにする"], a: [0, 1] },
+    { type: "multi", q: "【複数選択】自然毒（動物性）に含まれる貝毒の種類をすべて選べ。", options: ["下痢性貝毒", "まひ性貝毒", "アレルギー性貝毒", "感染性貝毒"], a: [0, 1] }
+];
+
+// 3. Input Text Questions (15 questions)
+const inputQuestions = [
+    { type: "input", q: "【記述入力】じゃがいもの芽に含まれる植物性の毒成分の名称を入力せよ。", a: ["ソラニン", "そらにん"] },
+    { type: "input", q: "【記述入力】ふぐ毒に含まれる動物性の毒成分の名称を入力せよ。", a: ["テトロドトキシン", "てとろどときしん"] },
+    { type: "input", q: "【記述入力】ナッツのかびから生成される発がん性のある毒成分を入力せよ。", a: ["アフラトキシン", "あふらときしん"] },
+    { type: "input", q: "【記述入力】赤身の魚で生成され、アレルギー様食中毒を起こす物質名を入力せよ。", a: ["ヒスタミン", "ひすたみん"] },
+    { type: "input", q: "【記述入力】魚を調理する際、細菌汚染を防ぐために使用する「水の種類」を入力せよ。", a: ["真水", "まみず"] },
+    { type: "input", q: "【記述入力】無機化学物質による食中毒予防で「割れ目が入った物は使用を避ける」とされる容器名をカタカナで入力せよ。", a: ["ホーロー", "ほーろー"] },
+    { type: "input", q: "【記述入力】食品を甘くする目的で使用される添加物の用途名を入力せよ。", a: ["甘味料", "かんみりょう"] },
+    { type: "input", q: "【記述入力】食品の保存性を高める目的で使用される添加物の用途名を入力せよ。", a: ["保存料", "ほぞんりょう"] },
+    { type: "input", q: "【記述入力】酸化による品質の低下を防ぐ目的で使用される添加物の用途名を入力せよ。", a: ["酸化防止剤", "さんかぼうしざい"] },
+    { type: "input", q: "【記述入力】レモンやバナナなどのかびの発生を防止する添加物の用途名を入力せよ。", a: ["防かび剤", "防カビ剤", "ぼうかびざい"] },
+    { type: "input", q: "【記述入力】かんぴょうやこんにゃく粉を漂白する目的の添加物の用途名を入力せよ。", a: ["漂白剤", "ひょうはくざい"] },
+    { type: "input", q: "【記述入力】食品に色をつける目的で使用される添加物の用途名を入力せよ。", a: ["着色料", "ちゃくしょくりょう"] },
+    { type: "input", q: "【記述入力】ノロウイルス対策に必要な加熱温度は何℃以上か。数字のみ入力せよ。", a: ["70", "70℃", "70度"] },
+    { type: "input", q: "【記述入力】アニサキス対策に必要な冷凍温度は何℃以下か。半角数字（マイナス含む）で入力せよ。", a: ["-20", "-20℃", "-20度"] },
+    { type: "input", q: "【記述入力】寄生虫による食中毒の代表例である寄生虫名をカタカナで入力せよ。", a: ["アニサキス", "あにさきす"] }
+];
+
+// Combined total: 25 + 12 + 15 = 52 questions
+const allCombinedQuestions = [...singleQuestions, ...multiQuestions, ...inputQuestions];
 
 // Shuffle Array Function
 function shuffle(array) {
@@ -979,16 +829,17 @@ function shuffle(array) {
 }
 
 // Global Variables
+let currentMode = 'single';
 let currentQuizList = [];
 let currentQIndex = 0;
 let score = 0;
-let answered = false;
+let isSubmitted = false;
+let selectedMultiIndices = [];
 
 let fcIndex = 0;
 
-// Initialize
 window.onload = () => {
-    initQuiz();
+    initQuizMode('single');
     initFlashcards();
 };
 
@@ -1002,88 +853,231 @@ function switchTab(tabName) {
     if (tabName === 'quiz') {
         document.querySelectorAll('.tab-btn')[0].classList.add('active');
         document.getElementById('quiz-section').classList.remove('hidden');
-    } else if (tabName === 'fill') {
+        initQuizMode('single');
+    } else if (tabName === 'multi') {
         document.querySelectorAll('.tab-btn')[1].classList.add('active');
+        document.getElementById('quiz-section').classList.remove('hidden');
+        initQuizMode('multi');
+    } else if (tabName === 'input') {
+        document.querySelectorAll('.tab-btn')[2].classList.add('active');
+        document.getElementById('quiz-section').classList.remove('hidden');
+        initQuizMode('input');
+    } else if (tabName === 'testmode') {
+        document.querySelectorAll('.tab-btn')[3].classList.add('active');
+        document.getElementById('quiz-section').classList.remove('hidden');
+        initQuizMode('testmode');
+    } else if (tabName === 'fill') {
+        document.querySelectorAll('.tab-btn')[4].classList.add('active');
         document.getElementById('fill-section').classList.remove('hidden');
     } else if (tabName === 'flashcard') {
-        document.querySelectorAll('.tab-btn')[2].classList.add('active');
+        document.querySelectorAll('.tab-btn')[5].classList.add('active');
         document.getElementById('flashcard-section').classList.remove('hidden');
     } else if (tabName === 'reference') {
-        document.querySelectorAll('.tab-btn')[3].classList.add('active');
+        document.querySelectorAll('.tab-btn')[6].classList.add('active');
         document.getElementById('reference-section').classList.remove('hidden');
     }
 }
 
-// Quiz Functions
-function initQuiz() {
-    currentQuizList = shuffle(quizData);
+function initQuizMode(mode) {
+    currentMode = mode;
+    if (mode === 'single') {
+        currentQuizList = shuffle(singleQuestions);
+    } else if (mode === 'multi') {
+        currentQuizList = shuffle(multiQuestions);
+    } else if (mode === 'input') {
+        currentQuizList = shuffle(inputQuestions);
+    } else if (mode === 'testmode') {
+        currentQuizList = shuffle(allCombinedQuestions);
+    }
     currentQIndex = 0;
     score = 0;
     showQuestion();
 }
 
 function showQuestion() {
-    answered = false;
+    isSubmitted = false;
+    selectedMultiIndices = [];
     document.getElementById('feedback').style.display = 'none';
-    document.getElementById('next-btn').style.display = 'none';
-    
+    document.getElementById('submit-btn').classList.remove('hidden');
+    document.getElementById('next-btn').classList.add('hidden');
+
     const qData = currentQuizList[currentQIndex];
     document.getElementById('quiz-progress').innerText = `問題 ${currentQIndex + 1} / ${currentQuizList.length}`;
     document.getElementById('quiz-score').innerText = `スコア: ${score}`;
     document.getElementById('question-text').innerText = qData.q;
 
-    const optionsObj = qData.options.map((opt, idx) => ({ text: opt, isCorrect: idx === qData.a }));
-    const shuffledOptions = shuffle(optionsObj);
+    // Type Badge
+    const badgeContainer = document.getElementById('type-badge-container');
+    if (qData.type === 'single') {
+        badgeContainer.innerHTML = '<span class="type-badge">🎯 単一選択 (1つ選択)</span>';
+    } else if (qData.type === 'multi') {
+        badgeContainer.innerHTML = '<span class="type-badge">☑️ 複数選択 (該当するものをすべて選択)</span>';
+    } else if (qData.type === 'input') {
+        badgeContainer.innerHTML = '<span class="type-badge">⌨️ 記述入力 (キーボードで入力)</span>';
+    }
 
-    const container = document.getElementById('options-container');
-    container.innerHTML = '';
+    const inputArea = document.getElementById('quiz-input-area');
+    inputArea.innerHTML = '';
 
-    shuffledOptions.forEach((opt) => {
-        const btn = document.createElement('button');
-        btn.className = 'option-btn';
-        btn.innerText = opt.text;
-        btn.onclick = () => checkAnswer(btn, opt.isCorrect, shuffledOptions);
-        container.appendChild(btn);
-    });
+    if (qData.type === 'single') {
+        const optionsObj = qData.options.map((opt, idx) => ({ text: opt, originalIdx: idx }));
+        const shuffledOptions = shuffle(optionsObj);
+        qData._shuffledOptions = shuffledOptions;
+
+        const grid = document.createElement('div');
+        grid.className = 'options-grid';
+        shuffledOptions.forEach((opt) => {
+            const btn = document.createElement('button');
+            btn.className = 'option-btn';
+            btn.innerText = opt.text;
+            btn.onclick = () => {
+                if (isSubmitted) return;
+                document.querySelectorAll('.option-btn').forEach(b => b.classList.remove('selected'));
+                btn.classList.add('selected');
+                selectedMultiIndices = [opt.originalIdx];
+            };
+            grid.appendChild(btn);
+        });
+        inputArea.appendChild(grid);
+    } else if (qData.type === 'multi') {
+        const optionsObj = qData.options.map((opt, idx) => ({ text: opt, originalIdx: idx }));
+        const shuffledOptions = shuffle(optionsObj);
+        qData._shuffledOptions = shuffledOptions;
+
+        const grid = document.createElement('div');
+        grid.className = 'options-grid';
+        shuffledOptions.forEach((opt) => {
+            const btn = document.createElement('button');
+            btn.className = 'option-btn';
+            btn.innerText = '☐ ' + opt.text;
+            btn.onclick = () => {
+                if (isSubmitted) return;
+                const pos = selectedMultiIndices.indexOf(opt.originalIdx);
+                if (pos > -1) {
+                    selectedMultiIndices.splice(pos, 1);
+                    btn.classList.remove('selected');
+                    btn.innerText = '☐ ' + opt.text;
+                } else {
+                    selectedMultiIndices.push(opt.originalIdx);
+                    btn.classList.add('selected');
+                    btn.innerText = '☑ ' + opt.text;
+                }
+            };
+            grid.appendChild(btn);
+        });
+        inputArea.appendChild(grid);
+    } else if (qData.type === 'input') {
+        const container = document.createElement('div');
+        container.className = 'text-input-container';
+        const input = document.createElement('input');
+        input.type = 'text';
+        input.id = 'quiz-text-answer';
+        input.className = 'text-input';
+        input.placeholder = '答えを入力してください';
+        input.onkeydown = (e) => {
+            if (e.key === 'Enter') submitCurrentAnswer();
+        };
+        container.appendChild(input);
+        inputArea.appendChild(container);
+    }
 }
 
-function checkAnswer(selectedBtn, isCorrect, options) {
-    if (answered) return;
-    answered = true;
+function submitCurrentAnswer() {
+    if (isSubmitted) return;
+    const qData = currentQuizList[currentQIndex];
 
-    const allBtns = document.querySelectorAll('.option-btn');
-    allBtns.forEach((btn, idx) => {
-        btn.disabled = true;
-        if (options[idx].isCorrect) {
-            btn.classList.add('correct');
+    let isCorrect = false;
+    let feedbackText = "";
+
+    if (qData.type === 'single') {
+        if (selectedMultiIndices.length === 0) {
+            alert("選択肢を1つ選んでください！");
+            return;
         }
-    });
+        isSubmitted = true;
+        isCorrect = (selectedMultiIndices[0] === qData.a);
+
+        const allBtns = document.querySelectorAll('.option-btn');
+        qData._shuffledOptions.forEach((opt, idx) => {
+            allBtns[idx].disabled = true;
+            if (opt.originalIdx === qData.a) {
+                allBtns[idx].classList.add('correct');
+            } else if (selectedMultiIndices.includes(opt.originalIdx)) {
+                allBtns[idx].classList.add('incorrect');
+            }
+        });
+        feedbackText = isCorrect ? "⭕ 正解！素晴らしい！" : `❌ 不正解... 正解は「${qData.options[qData.a]}」です。`;
+
+    } else if (qData.type === 'multi') {
+        if (selectedMultiIndices.length === 0) {
+            alert("該当する項目を少なくとも1つ選択してください！");
+            return;
+        }
+        isSubmitted = true;
+        const sortedSelected = [...selectedMultiIndices].sort();
+        const sortedCorrect = [...qData.a].sort();
+        isCorrect = (JSON.stringify(sortedSelected) === JSON.stringify(sortedCorrect));
+
+        const allBtns = document.querySelectorAll('.option-btn');
+        qData._shuffledOptions.forEach((opt, idx) => {
+            allBtns[idx].disabled = true;
+            if (qData.a.includes(opt.originalIdx)) {
+                allBtns[idx].classList.add('correct');
+            } else if (selectedMultiIndices.includes(opt.originalIdx)) {
+                allBtns[idx].classList.add('incorrect');
+            }
+        });
+
+        const correctNames = qData.a.map(i => qData.options[i]).join("、");
+        feedbackText = isCorrect ? "⭕ 正解！すべて合っています！" : `❌ 不正解... 正解の組み合わせは「${correctNames}」です。`;
+
+    } else if (qData.type === 'input') {
+        const inputEl = document.getElementById('quiz-text-answer');
+        const userVal = inputEl.value.trim().toLowerCase();
+        if (userVal === "") {
+            alert("答えを入力してください！");
+            return;
+        }
+        isSubmitted = true;
+        inputEl.disabled = true;
+
+        const validAnswers = qData.a.map(a => a.toLowerCase());
+        isCorrect = validAnswers.some(ans => userVal === ans || userVal.includes(ans) || ans.includes(userVal));
+
+        if (isCorrect) {
+            inputEl.style.backgroundColor = "#d1fae5";
+            inputEl.style.borderColor = "var(--correct)";
+        } else {
+            inputEl.style.backgroundColor = "#fee2e2";
+            inputEl.style.borderColor = "var(--incorrect)";
+        }
+        feedbackText = isCorrect ? "⭕ 正解！素晴らしい！" : `❌ 不正解... 正解例：「${qData.a[0]}」`;
+    }
 
     const feedback = document.getElementById('feedback');
     if (isCorrect) {
         playSound('correct');
-        selectedBtn.classList.add('correct');
-        feedback.innerText = "⭕ 正解！素晴らしい！";
+        feedback.innerText = feedbackText;
         feedback.style.backgroundColor = "#d1fae5";
         feedback.style.color = "#065f46";
-        score += 4; // 25 questions * 4 = 100 max
+        score += 10;
     } else {
         playSound('incorrect');
-        selectedBtn.classList.add('incorrect');
-        feedback.innerText = "❌ 不正解... 正解を確認して覚えよう！";
+        feedback.innerText = feedbackText;
         feedback.style.backgroundColor = "#fee2e2";
         feedback.style.color = "#991b1b";
     }
     feedback.style.display = 'block';
     document.getElementById('quiz-score').innerText = `スコア: ${score}`;
 
+    document.getElementById('submit-btn').classList.add('hidden');
     const nextBtn = document.getElementById('next-btn');
     if (currentQIndex < currentQuizList.length - 1) {
         nextBtn.innerText = "次の問題へ ➔";
     } else {
         nextBtn.innerText = "結果を見る 🏁";
     }
-    nextBtn.style.display = 'block';
+    nextBtn.classList.remove('hidden');
 }
 
 function nextQuestion() {
@@ -1098,18 +1092,18 @@ function nextQuestion() {
 function showResults() {
     playSound('fanfare');
     const container = document.getElementById('quiz-section');
-    const totalScore = currentQuizList.length * 4;
-    const percentage = Math.round((score / totalScore) * 100);
-    
+    const maxScore = currentQuizList.length * 10;
+    const percentage = Math.round((score / maxScore) * 100);
+
     let evalText = "";
-    if (percentage === 100) evalText = "🎉 満点！これでテストの15点は確実です！完璧！";
-    else if (percentage >= 80) evalText = "👍 惜しい！あと少しで完ぺき！間違えたところを復習しよう。";
-    else evalText = "💪 もう一度「穴埋め」や「一覧表」でおさらいしてみよう！";
+    if (percentage === 100) evalText = "🎉 満点！素晴らしいマスター度です！テストの15点は確実！";
+    else if (percentage >= 80) evalText = "👍 惜しい！あと少しで完ぺき！間違えた問題をおさらいしよう。";
+    else evalText = "💪 もう一度「表穴埋め」や「一覧表」でおさらいしてみよう！";
 
     container.innerHTML = `
         <div style="text-align: center; padding: 20px;">
-            <h2>🎉 クイズ終了！</h2>
-            <p style="font-size: 1.5rem; font-weight: bold; color: var(--primary);">得点: ${score} / ${totalScore}点 (${percentage}%)</p>
+            <h2>🎉 クイズ・テスト終了！</h2>
+            <p style="font-size: 1.5rem; font-weight: bold; color: var(--primary);">得点: ${score} / ${maxScore}点 (${percentage}%)</p>
             <p style="font-size: 1.1rem; margin-bottom: 24px;">${evalText}</p>
             <button class="tab-btn active" onclick="location.reload()">もう一回挑戦する 🔄</button>
         </div>
@@ -1120,8 +1114,6 @@ function showResults() {
 function checkFillTable() {
     const inputs = document.querySelectorAll('#fill-section .fill-input');
     let correctCount = 0;
-    
-    // Remove previous hints
     document.querySelectorAll('#fill-section .answer-hint').forEach(el => el.remove());
 
     inputs.forEach(input => {
@@ -1129,7 +1121,6 @@ function checkFillTable() {
         const validAnswers = input.getAttribute('data-answers').split('|').map(a => a.trim().toLowerCase());
 
         input.classList.remove('correct', 'incorrect');
-
         let isRight = false;
         if (userVal !== "") {
             isRight = validAnswers.some(ans => userVal === ans || userVal.includes(ans) || ans.includes(userVal));
@@ -1147,13 +1138,9 @@ function checkFillTable() {
         }
     });
 
-    if (correctCount === inputs.length) {
-        playSound('fanfare');
-    } else if (correctCount > 0) {
-        playSound('correct');
-    } else {
-        playSound('incorrect');
-    }
+    if (correctCount === inputs.length) playSound('fanfare');
+    else if (correctCount > 0) playSound('correct');
+    else playSound('incorrect');
 
     const resultEl = document.getElementById('fill-score-result');
     resultEl.innerText = `採点結果: ${correctCount} / ${inputs.length} 項目正解！`;
