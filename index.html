@@ -1,0 +1,775 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>家庭科 テスト対策 暗記＆クアプリ</title>
+    <style>
+        :root {
+            --primary: #4f46e5;
+            --primary-hover: #4338ca;
+            --bg: #f8fafc;
+            --card-bg: #ffffff;
+            --text: #1e293b;
+            --border: #e2e8f0;
+            --correct: #10b981;
+            --incorrect: #ef4444;
+        }
+
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
+            background-color: var(--bg);
+            color: var(--text);
+            margin: 0;
+            padding: 16px;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            min-height: 100vh;
+        }
+
+        .container {
+            max-width: 900px;
+            width: 100%;
+        }
+
+        header {
+            text-align: center;
+            margin-bottom: 24px;
+        }
+
+        h1 {
+            font-size: 1.8rem;
+            color: #1e1b4b;
+            margin-bottom: 8px;
+        }
+
+        p.subtitle {
+            color: #64748b;
+            font-size: 0.95rem;
+        }
+
+        .nav-tabs {
+            display: flex;
+            gap: 10px;
+            margin-bottom: 20px;
+            justify-content: center;
+            flex-wrap: wrap;
+        }
+
+        .tab-btn {
+            padding: 10px 20px;
+            font-size: 1rem;
+            font-weight: 600;
+            border: 2px solid var(--primary);
+            background: white;
+            color: var(--primary);
+            border-radius: 8px;
+            cursor: pointer;
+            transition: all 0.2s;
+        }
+
+        .tab-btn.active, .tab-btn:hover {
+            background: var(--primary);
+            color: white;
+        }
+
+        .card {
+            background: var(--card-bg);
+            border-radius: 12px;
+            padding: 24px;
+            box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -1px rgba(0, 0, 0, 0.06);
+            margin-bottom: 24px;
+        }
+
+        /* Table view styling */
+        .table-responsive {
+            overflow-x: auto;
+        }
+
+        table {
+            width: 100%;
+            border-collapse: collapse;
+            font-size: 0.95rem;
+        }
+
+        th, td {
+            border: 1px solid var(--border);
+            padding: 12px;
+            text-align: left;
+        }
+
+        th {
+            background-color: #e0e7ff;
+            color: #3730a3;
+        }
+
+        tr:nth-child(even) {
+            background-color: #f1f5f9;
+        }
+
+        /* Quiz styling */
+        .quiz-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 16px;
+            font-weight: bold;
+        }
+
+        .score-badge {
+            background: #e0e7ff;
+            color: var(--primary);
+            padding: 4px 12px;
+            border-radius: 20px;
+        }
+
+        .question-text {
+            font-size: 1.2rem;
+            font-weight: bold;
+            margin-bottom: 20px;
+            line-height: 1.5;
+        }
+
+        .options-grid {
+            display: grid;
+            grid-template-columns: 1fr;
+            gap: 12px;
+        }
+
+        @media(min-width: 640px) {
+            .options-grid {
+                grid-template-columns: 1fr 1fr;
+            }
+        }
+
+        .option-btn {
+            padding: 14px;
+            border: 2px solid var(--border);
+            border-radius: 8px;
+            background: white;
+            font-size: 1rem;
+            text-align: left;
+            cursor: pointer;
+            transition: background 0.2s, border-color 0.2s;
+        }
+
+        .option-btn:hover {
+            border-color: var(--primary);
+            background: #f5f3ff;
+        }
+
+        .option-btn.correct {
+            background-color: #d1fae5 !important;
+            border-color: var(--correct) !important;
+            color: #065f46;
+            font-weight: bold;
+        }
+
+        .option-btn.incorrect {
+            background-color: #fee2e2 !important;
+            border-color: var(--incorrect) !important;
+            color: #991b1b;
+        }
+
+        .feedback {
+            margin-top: 16px;
+            padding: 12px;
+            border-radius: 8px;
+            font-weight: bold;
+            display: none;
+        }
+
+        .next-btn {
+            margin-top: 20px;
+            padding: 12px 24px;
+            background: var(--primary);
+            color: white;
+            border: none;
+            border-radius: 8px;
+            font-size: 1rem;
+            cursor: pointer;
+            float: right;
+            display: none;
+        }
+
+        .next-btn:hover {
+            background: var(--primary-hover);
+        }
+
+        /* Flashcard styling */
+        .flashcard {
+            min-height: 200px;
+            border: 2px solid var(--primary);
+            border-radius: 12px;
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+            align-items: center;
+            padding: 20px;
+            text-align: center;
+            cursor: pointer;
+            background: #faf5ff;
+            user-select: none;
+            transition: transform 0.2s;
+        }
+
+        .flashcard:active {
+            transform: scale(0.98);
+        }
+
+        .flashcard .category {
+            font-size: 0.85rem;
+            color: #6b21a8;
+            font-weight: bold;
+            margin-bottom: 8px;
+        }
+
+        .flashcard .question {
+            font-size: 1.3rem;
+            font-weight: bold;
+            color: #3b0764;
+        }
+
+        .flashcard .answer {
+            font-size: 1.2rem;
+            color: #047857;
+            font-weight: bold;
+            margin-top: 16px;
+            display: none;
+        }
+
+        .fc-controls {
+            display: flex;
+            justify-content: space-between;
+            margin-top: 20px;
+        }
+
+        .fc-btn {
+            padding: 10px 20px;
+            background: #e2e8f0;
+            border: none;
+            border-radius: 8px;
+            cursor: pointer;
+            font-weight: bold;
+        }
+
+        .fc-btn:hover {
+            background: #cbd5e1;
+        }
+
+        .hidden {
+            display: none;
+        }
+    </style>
+</head>
+<body>
+
+<div class="container">
+    <header>
+        <h1>家庭科テスト対策：食中毒＆食品添加物</h1>
+        <p class="subtitle">完全マスターアプリ（資料8：食中毒の種類と予防法 / 資料12：食品添加物と使用例）</p>
+    </header>
+
+    <div class="nav-tabs">
+        <button class="tab-btn active" onclick="switchTab('quiz')">🎯 4択クイズ</button>
+        <button class="tab-btn" onclick="switchTab('flashcard')">🃏 単語帳 (カード)</button>
+        <button class="tab-btn" onclick="switchTab('reference')">📖 一覧表を見る</button>
+    </div>
+
+    <!-- QUIZ SECTION -->
+    <div id="quiz-section" class="card">
+        <div class="quiz-header">
+            <span id="quiz-progress">問題 1 / --</span>
+            <span class="score-badge" id="quiz-score">スコア: 0</span>
+        </div>
+        <div class="question-text" id="question-text">読み込み中...</div>
+        <div class="options-grid" id="options-container"></div>
+        <div class="feedback" id="feedback"></div>
+        <button class="next-btn" id="next-btn" onclick="nextQuestion()">次の問題へ ➔</button>
+    </div>
+
+    <!-- FLASHCARD SECTION -->
+    <div id="flashcard-section" class="card hidden">
+        <div style="text-align: right; margin-bottom: 8px; font-weight: bold; color: #64748b;" id="fc-counter">1 / 10</div>
+        <div class="flashcard" onclick="toggleAnswer()">
+            <div class="category" id="fc-category">カテゴリー</div>
+            <div class="question" id="fc-question">カードをクリックして答えを表示</div>
+            <div class="answer" id="fc-answer">ここに答えが表示されます</div>
+        </div>
+        <div class="fc-controls">
+            <button class="fc-btn" onclick="prevCard()">◀ 前へ</button>
+            <button class="fc-btn" onclick="nextCard()">次へ ▶</button>
+        </div>
+    </div>
+
+    <!-- REFERENCE SECTION -->
+    <div id="reference-section" class="card hidden">
+        <h2>資料8：食中毒の種類と予防法</h2>
+        <div class="table-responsive">
+            <table>
+                <thead>
+                    <tr>
+                        <th>分類</th>
+                        <th>種類</th>
+                        <th>原因となる物の例・病原体</th>
+                        <th>予防法</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    <tr>
+                        <td rowspan="3">微生物性食中毒</td>
+                        <td>細菌性 (感染型)</td>
+                        <td>サルモネラ属菌、腸炎ビブリオ、カンピロバクター、病原性大腸菌</td>
+                        <td rowspan="3">・細菌に汚染されないように衛生的に取り扱う（まな板などの調理器具や手指はよく洗う。傷のある手でさわらない。魚は真水で洗う）。<br>・低温で保存し、菌の増殖を防ぐ。<br>・生食はできるだけ避ける。<br>・中心まで火が通るように十分加熱する。<br>・ノロウイルス：70℃以上でしっかり加熱するか、-20℃で24時間以上冷凍する。</td>
+                    </tr>
+                    <tr>
+                        <td>細菌性 (毒素型)</td>
+                        <td>黄色ブドウ球菌、ボツリヌス菌</td>
+                    </tr>
+                    <tr>
+                        <td>ウイルス性</td>
+                        <td>ノロウイルス</td>
+                    </tr>
+                    <tr>
+                        <td colspan="2">寄生虫による食中毒</td>
+                        <td>アニサキスなど</td>
+                        <td>70℃以上でしっかり加熱するか、-20℃で24時間以上冷凍する。</td>
+                    </tr>
+                    <tr>
+                        <td rowspan="2">自然毒による食中毒</td>
+                        <td>植物性</td>
+                        <td>ナッツのかび（アフラトキシン）、毒きのこ、青梅、わらび、じゃがいもの芽（ソラニン）</td>
+                        <td>傷のある物、虫食い、かびを避ける。素人判断をしない。あく抜きを正確に行う。じゃがいもの芽は取り除く。</td>
+                    </tr>
+                    <tr>
+                        <td>動物性</td>
+                        <td>ふぐ毒（テトロドトキシン）、下痢性貝毒、まひ性貝毒など</td>
+                        <td>自分で調理せず、免許を持つ専門家に任せる。禁止地域（有害プランクトン発生地域など）で採取した物を食べない。</td>
+                    </tr>
+                    <tr>
+                        <td rowspan="2">化学物質による食中毒</td>
+                        <td>有機毒</td>
+                        <td>農薬（殺虫剤・除草剤）、PCB、ホルムアルデヒドなどの誤用、残留や溶出</td>
+                        <td>薬品の管理を厳重にする。食品以外の物を食品容器に移し替えない。電子レンジ用でない合成樹脂製容器でレンジ加熱しない。</td>
+                    </tr>
+                    <tr>
+                        <td>無機毒</td>
+                        <td>水銀、鉛、カドミウム、クロム、ヒ素などの残留や溶出</td>
+                        <td>禁止地域で採取した物を食べない。<br>ホーローに割れ目が入った物は使用を避ける。</td>
+                    </tr>
+                    <tr>
+                        <td colspan="2">アレルギー様食中毒</td>
+                        <td>赤身の魚（生成されたヒスタミン）など</td>
+                        <td>低温で保存しヒスタミンをつくりだす菌の増殖を防ぐ。</td>
+                    </tr>
+                </tbody>
+            </table>
+        </div>
+
+        <h2 style="margin-top: 40px;">資料12：食品添加物と使用例</h2>
+        <div class="table-responsive">
+            <table>
+                <thead>
+                    <tr>
+                        <th>用途名</th>
+                        <th>目的</th>
+                        <th>代表的なもの</th>
+                        <th>食品例</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    <tr>
+                        <td>甘味料</td>
+                        <td>食品を甘くする</td>
+                        <td>サッカリン、アスパルテーム、キシリトール</td>
+                        <td>清涼飲料水、菓子、ジャム、漬け物</td>
+                    </tr>
+                    <tr>
+                        <td>着色料</td>
+                        <td>食品に色をつける</td>
+                        <td>タール系色素、クチナシ色素</td>
+                        <td>菓子、漬け物、魚肉ソーセージ</td>
+                    </tr>
+                    <tr>
+                        <td>保存料</td>
+                        <td>食品の保存性を高める</td>
+                        <td>ソルビン酸、安息香酸Na</td>
+                        <td>しょうゆ、みそ、バター、ハム</td>
+                    </tr>
+                    <tr>
+                        <td>酸化防止剤</td>
+                        <td>酸化による品質の低下を防ぐ</td>
+                        <td>L-アスコルビン酸、エリソルビン酸</td>
+                        <td>バター、油脂、魚肉製品</td>
+                    </tr>
+                    <tr>
+                        <td>防かび剤</td>
+                        <td>かびの発生を防止</td>
+                        <td>イマザリル、ジフェニル、OPP、TBZ</td>
+                        <td>レモン、バナナ、オレンジ</td>
+                    </tr>
+                    <tr>
+                        <td>漂白剤</td>
+                        <td>食品を漂白する</td>
+                        <td>亜硫酸ナトリウム、次亜塩素酸ナトリウム</td>
+                        <td>かんぴょう、こんにゃく粉</td>
+                    </tr>
+                </tbody>
+            </table>
+        </div>
+    </div>
+</div>
+
+<script>
+const quizData = [
+    // 食中毒 - 微生物・寄生虫・毒素
+    {
+        q: "細菌性食中毒のうち、「感染型」に分類される細菌の組み合わせとして正しいものはどれ？",
+        options: [
+            "サルモネラ属菌・腸炎ビブリオ・カンピロバクター・病原性大腸菌",
+            "黄色ブドウ球菌・ボツリヌス菌",
+            "ノロウイルス・アニサキス",
+            "アフラトキシン・ソラニン"
+        ],
+        a: 0
+    },
+    {
+        q: "細菌性食中毒のうち、「毒素型」に分類されるものはどれ？",
+        options: [
+            "サルモネラ属菌・カンピロバクター",
+            "黄色ブドウ球菌・ボツリヌス菌",
+            "腸炎ビブリオ・病原性大腸菌",
+            "ノロウイルス"
+        ],
+        a: 1
+    },
+    {
+        q: "寄生虫による食中毒の代表例と、その予防法として正しいものはどれ？",
+        options: [
+            "アニサキス — 70℃以上で加熱するか、-20℃で24時間以上冷凍する",
+            "ノロウイルス — 真水でよく洗う",
+            "ソラニン — 煮こぼしてアク抜きをする",
+            "テトロドトキシン — 水に長時間晒す"
+        ],
+        a: 0
+    },
+    {
+        q: "じゃがいもの芽に含まれる自然毒（植物性）の名称はどれ？",
+        options: [
+            "ソラニン",
+            "アフラトキシン",
+            "テトロドトキシン",
+            "ヒスタミン"
+        ],
+        a: 0
+    },
+    {
+        q: "ナッツのかびから発生する自然毒（植物性）の名称はどれ？",
+        options: [
+            "アフラトキシン",
+            "ソラニン",
+            "ヒスタミン",
+            "テトロドトキシン"
+        ],
+        a: 0
+    },
+    {
+        q: "ふぐ毒の成分（自然毒・動物性）の名称はどれ？",
+        options: [
+            "テトロドトキシン",
+            "ソラニン",
+            "アフラトキシン",
+            "ヒスタミン"
+        ],
+        a: 0
+    },
+    {
+        q: "赤身の魚で発生しやすく、低温保存で菌の増殖を防ぐ必要がある食中毒の原因物質はどれ？",
+        options: [
+            "ヒスタミン（アレルギー様食中毒）",
+            "テトロドトキシン（動物性自然毒）",
+            "ソラニン（植物性自然毒）",
+            "PCB（有機化学物質）"
+        ],
+        a: 0
+    },
+    {
+        q: "化学物質による食中毒（無機毒）の予防法として、「割れ目が入った物は使用を避ける」と記載されている調理器具・容器はどれ？",
+        options: [
+            "ホーロー",
+            "合成樹脂製容器",
+            "土鍋",
+            "アルミ鍋"
+        ],
+        a: 0
+    },
+    // 食品添加物
+    {
+        q: "食品添加物のうち、「サッカリン・アスパルテーム・キシリトール」の用途名はどれ？",
+        options: [
+            "甘味料",
+            "着色料",
+            "保存料",
+            "酸化防止剤"
+        ],
+        a: 0
+    },
+    {
+        q: "食品添加物のうち、「タール系色素・クチナシ色素」の用途名はどれ？",
+        options: [
+            "着色料",
+            "漂白剤",
+            "保存料",
+            "防かび剤"
+        ],
+        a: 0
+    },
+    {
+        q: "「ソルビン酸・安息香酸Na」の主な用途名と、使用される食品例（しょうゆ・みそ・バター・ハム等）の組み合わせはどれ？",
+        options: [
+            "保存料 — 食品の保存性を高める",
+            "酸化防止剤 — 酸化による品質低下を防ぐ",
+            "防かび剤 — かびの発生を防止する",
+            "漂白剤 — 食品を漂白する"
+        ],
+        a: 0
+    },
+    {
+        q: "「L-アスコルビン酸・エリソルビン酸」の用途名と目的はどれ？",
+        options: [
+            "酸化防止剤 — 酸化による品質の低下を防ぐ",
+            "保存料 — 食品の保存性を高める",
+            "漂白剤 — 食品を漂白する",
+            "甘味料 — 食品を甘くする"
+        ],
+        a: 0
+    },
+    {
+        q: "レモン・バナナ・オレンジなどの柑橘・果物に使用される防かび剤の代表例として正しいものはどれ？",
+        options: [
+            "イマザリル・ジフェニル・OPP・TBZ",
+            "亜硫酸ナトリウム・次亜塩素酸ナトリウム",
+            "ソルビン酸・安息香酸Na",
+            "サッカリン・キシリトール"
+        ],
+        a: 0
+    },
+    {
+        q: "かんぴょうやこんにゃく粉に使用され、「食品を漂白する」目的で使われる代表的な添加物はどれ？",
+        options: [
+            "亜硫酸ナトリウム・次亜塩素酸ナトリウム（漂白剤）",
+            "イマザリル・OPP（防かび剤）",
+            "タール系色素・クチナシ色素（着色料）",
+            "L-アスコルビン酸（酸化防止剤）"
+        ],
+        a: 0
+    }
+];
+
+// Shuffle Array Function
+function shuffle(array) {
+    let currentIndex = array.length, randomIndex;
+    const newArray = [...array];
+    while (currentIndex !== 0) {
+        randomIndex = Math.floor(Math.random() * currentIndex);
+        currentIndex--;
+        [newArray[currentIndex], newArray[randomIndex]] = [newArray[randomIndex], newArray[currentIndex]];
+    }
+    return newArray;
+}
+
+// Global Variables
+let currentQuizList = [];
+let currentQIndex = 0;
+let score = 0;
+let answered = false;
+
+let fcIndex = 0;
+
+// Initialize
+window.onload = () => {
+    initQuiz();
+    initFlashcards();
+};
+
+function switchTab(tabName) {
+    document.querySelectorAll('.tab-btn').forEach(btn => btn.classList.remove('active'));
+    document.getElementById('quiz-section').classList.add('hidden');
+    document.getElementById('flashcard-section').classList.add('hidden');
+    document.getElementById('reference-section').classList.add('hidden');
+
+    if (tabName === 'quiz') {
+        document.querySelectorAll('.tab-btn')[0].classList.add('active');
+        document.getElementById('quiz-section').classList.remove('hidden');
+    } else if (tabName === 'flashcard') {
+        document.querySelectorAll('.tab-btn')[1].classList.add('active');
+        document.getElementById('flashcard-section').classList.remove('hidden');
+    } else if (tabName === 'reference') {
+        document.querySelectorAll('.tab-btn')[2].classList.add('active');
+        document.getElementById('reference-section').classList.remove('hidden');
+    }
+}
+
+// Quiz Functions
+function initQuiz() {
+    currentQuizList = shuffle(quizData);
+    currentQIndex = 0;
+    score = 0;
+    showQuestion();
+}
+
+function showQuestion() {
+    answered = false;
+    document.getElementById('feedback').style.display = 'none';
+    document.getElementById('next-btn').style.display = 'none';
+    
+    const qData = currentQuizList[currentQIndex];
+    document.getElementById('quiz-progress').innerText = `問題 ${currentQIndex + 1} / ${currentQuizList.length}`;
+    document.getElementById('quiz-score').innerText = `スコア: ${score}`;
+    document.getElementById('question-text').innerText = qData.q;
+
+    // Create shuffled options with original index tracking
+    const optionsObj = qData.options.map((opt, idx) => ({ text: opt, isCorrect: idx === qData.a }));
+    const shuffledOptions = shuffle(optionsObj);
+
+    const container = document.getElementById('options-container');
+    container.innerHTML = '';
+
+    shuffledOptions.forEach((opt) => {
+        const btn = document.createElement('button');
+        btn.className = 'option-btn';
+        btn.innerText = opt.text;
+        btn.onclick = () => checkAnswer(btn, opt.isCorrect, shuffledOptions);
+        container.appendChild(btn);
+    });
+}
+
+function checkAnswer(selectedBtn, isCorrect, options) {
+    if (answered) return;
+    answered = true;
+
+    const allBtns = document.querySelectorAll('.option-btn');
+    allBtns.forEach((btn, idx) => {
+        btn.disabled = true;
+        if (options[idx].isCorrect) {
+            btn.classList.add('correct');
+        }
+    });
+
+    const feedback = document.getElementById('feedback');
+    if (isCorrect) {
+        selectedBtn.classList.add('correct');
+        feedback.innerText = "⭕ 正解！素晴らしい！";
+        feedback.style.backgroundColor = "#d1fae5";
+        feedback.style.color = "#065f46";
+        score += 10;
+    } else {
+        selectedBtn.classList.add('incorrect');
+        feedback.innerText = "❌ 不正解... 正解を確認して覚えよう！";
+        feedback.style.backgroundColor = "#fee2e2";
+        feedback.style.color = "#991b1b";
+    }
+    feedback.style.display = 'block';
+    document.getElementById('quiz-score').innerText = `スコア: ${score}`;
+
+    const nextBtn = document.getElementById('next-btn');
+    if (currentQIndex < currentQuizList.length - 1) {
+        nextBtn.innerText = "次の問題へ ➔";
+    } else {
+        nextBtn.innerText = "結果を見る 🏁";
+    }
+    nextBtn.style.display = 'block';
+}
+
+function nextQuestion() {
+    if (currentQIndex < currentQuizList.length - 1) {
+        currentQIndex++;
+        showQuestion();
+    } else {
+        showResults();
+    }
+}
+
+function showResults() {
+    const container = document.getElementById('quiz-section');
+    const totalScore = currentQuizList.length * 10;
+    const percentage = Math.round((score / totalScore) * 100);
+    
+    let evalText = "";
+    if (percentage === 100) evalText = "🎉 満点！これでテストの15点は確実です！完璧！";
+    else if (percentage >= 80) evalText = "👍 惜しい！あと少しで完ぺき！間違えたところを復習しよう。";
+    else evalText = "💪 もう一度「一覧表」や「暗記カード」でおさらいしてみよう！";
+
+    container.innerHTML = `
+        <div style="text-align: center; padding: 20px;">
+            <h2>🎉 クイズ終了！</h2>
+            <p style="font-size: 1.5rem; font-weight: bold; color: var(--primary);">得点: ${score} / ${totalScore}点 (${percentage}%)</p>
+            <p style="font-size: 1.1rem; margin-bottom: 24px;">${evalText}</p>
+            <button class="tab-btn active" onclick="location.reload()">もう一回挑戦する 🔄</button>
+        </div>
+    `;
+}
+
+// Flashcard Functions
+const fcData = [
+    { cat: "食中毒 / 細菌性(感染型)", q: "サルモネラ属菌・腸炎ビブリオ・カンピロバクター・病原性大腸菌", a: "分類：細菌性（感染型）食中毒" },
+    { cat: "食中毒 / 細菌性(毒素型)", q: "黄色ブドウ球菌・ボツリヌス菌", a: "分類：細菌性（毒素型）食中毒" },
+    { cat: "食中毒 / ウイルス性", q: "ノロウイルス（予防：70℃以上加熱または-20℃で24時間以上冷凍）", a: "分類：ウイルス性食中毒" },
+    { cat: "食中毒 / 寄生虫", q: "アニサキス（予防：70℃以上加熱または-20℃で24時間以上冷凍）", a: "分類：寄生虫による食中毒" },
+    { cat: "食中毒 / 自然毒(植物性)", q: "ソラニン", a: "じゃがいもの芽に含まれる毒成分" },
+    { cat: "食中毒 / 自然毒(植物性)", q: "アフラトキシン", a: "ナッツのかびから発生する毒成分" },
+    { cat: "食中毒 / 自然毒(動物性)", q: "テトロドトキシン", a: "ふぐ毒の成分" },
+    { cat: "食中毒 / アレルギー様", q: "ヒスタミン", a: "赤身の魚などで生成されるアレルギー様食中毒の原因物質" },
+    { cat: "食中毒 / 化学物質(無機毒)", q: "ホーローに割れ目が入った物", a: "使用を避けるべき（水銀・鉛・カドミウム等の溶出・残留を防ぐため）" },
+    { cat: "食品添加物 / 甘味料", q: "サッカリン、アスパルテーム、キシリトール", a: "用途名：甘味料（目的：食品を甘くする）" },
+    { cat: "食品添加物 / 着色料", q: "タール系色素、クチナシ色素", a: "用途名：着色料（目的：食品に色をつける）" },
+    { cat: "食品添加物 / 保存料", q: "ソルビン酸、安息香酸Na", a: "用途名：保存料（目的：食品の保存性を高める）" },
+    { cat: "食品添加物 / 酸化防止剤", q: "L-アスコルビン酸、エリソルビン酸", a: "用途名：酸化防止剤（目的：酸化による品質の低下を防ぐ）" },
+    { cat: "食品添加物 / 防かび剤", q: "イマザリル、ジフェニル、OPP、TBZ", a: "用途名：防かび剤（対象：レモン、バナナ、オレンジ）" },
+    { cat: "食品添加物 / 漂白剤", q: "亜硫酸ナトリウム、次亜塩素酸ナトリウム", a: "用途名：漂白剤（対象：かんぴょう、こんにゃく粉）" }
+];
+
+function initFlashcards() {
+    fcIndex = 0;
+    updateFlashcard();
+}
+
+function updateFlashcard() {
+    const item = fcData[fcIndex];
+    document.getElementById('fc-counter').innerText = `${fcIndex + 1} / ${fcData.length}`;
+    document.getElementById('fc-category').innerText = item.cat;
+    document.getElementById('fc-question').innerText = item.q;
+    document.getElementById('fc-answer').innerText = item.a;
+    document.getElementById('fc-answer').style.display = 'none';
+}
+
+function toggleAnswer() {
+    const ans = document.getElementById('fc-answer');
+    if (ans.style.display === 'none') {
+        ans.style.display = 'block';
+    } else {
+        ans.style.display = 'none';
+    }
+}
+
+function prevCard() {
+    if (fcIndex > 0) {
+        fcIndex--;
+        updateFlashcard();
+    }
+}
+
+function nextCard() {
+    if (fcIndex < fcData.length - 1) {
+        fcIndex++;
+        updateFlashcard();
+    } else {
+        fcIndex = 0; // loop
+        updateFlashcard();
+    }
+}
+</script>
+
+</body>
+</html>
